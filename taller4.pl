@@ -52,9 +52,18 @@ costo_edificio(U,R) :- edificio(U), costo(U,R).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+%% Lo que hacemos al agregar "ANTERIOR is X-1, not(esEjercito(ANTERIOR, Y, E))" es lo siguiente:
+%% A esta altura, E ya esta instanciado y al X le restamos 1. Nosotros le estamos pidiendo a not que se fije si con el valor ANTERIOR 
+%%(que es X-1) y con el valor Y, puede generar el ejercito E ya instanciado. 
+%% Si esEjercito(ANTERIOR, Y, E) da true significa que pudo generar el mencionado ejercito E, por lo tanto E ya habia sido generado
+%% con X-1 en vez de X. En otras palabras, es un ejercito repetido. Logicamente, not falla.
+%% Ahora bien, si esEjercito(ANTERIOR, Y, E) da false, significa que NO pudo generar el mencionado ejercito E, por lo tanto 
+%% es un caso no repetido. Not da true, y el nuevo ejercito es agregado. 
+
 % Ej 2 : instanciar un ejército arbitrario
 % ejercito ( -E )
-ejercito(E) :- pairs(X,Y), esEjercito(X,Y,E).
+ejercito(E) :-  pairs(X,Y), esEjercito(X,Y,E), ANTERIOR is X-1, not(esEjercito(ANTERIOR, Y, E)).
 
 % esEjercito(+K,+N,-E): tiene éxito si E es un ejército de N batallones con hasta K unidades cada uno.
 esEjercito(_,0,[]) :- !.
@@ -65,24 +74,6 @@ pairs(X,Y) :- from(2, S), K is S-1, between(1, K, X), Y is S-X.
 from(X, X).
 from(X, Y) :- N is X+1, from(N,Y). 
 
-
-
-%rep(_,0,[]) :- !.
-%rep(_,_,[]) :- fail, !.
-%rep(E,N,[X|XS]) :- E = X, K is N-1, rep(E,K,XS).
-
-%esEjercito([(U,C) | LS]) :- pairsInfinite(C,Y) ,  unidad(U), rep((U,C),Y,[(U,C) | LS]).
-%esEjercito([(U,C) | LS]) :- pairs(X,C), unidad(U). %agregarBatallon(X,LS).
-%agregarBatallon(X,LS) :- unidad(A)
-
-%pushN(+E, +N, -L)
-%pushN(E, 0, []).
-%pushN(E, N, L) :- append([E], L, X), N is N-1, pushN(E, N, Y).
-
-%pairsFinite(X,Y,START,END) :- between(START,END,S), K is S-1, between(1,K,
-%pairsFinite(X,Y, START, END) :- from(2, S), K is S-1, between(1, K, X), Y is S-X, START =< Y, START =< X, Y =< END, X =< END.
-
-
 % Reversibilidad:
 
 
@@ -92,8 +83,8 @@ from(X, Y) :- N is X+1, from(N,Y).
 
 % Ej 3 : instancia una lista de edificios necesarios para el ejército
 % edificiosNecesarios ( +Ej , -Ed )
-%edificiosNecesarios([], []).
-%edificiosNecesarios([(U,C) | L], R) :- entrena(U,X), edificiosNecesarios(L, Y), append([X], Y, Z), sort(Z, R).
+edificiosNecesarios([], []).
+edificiosNecesarios([(U,C) | L], R) :- entrena(U,X), edificiosNecesarios(L, Y), append([X], Y, Z), sort(Z, R).
 % Reversibilidad: es muy reversible
 
 
