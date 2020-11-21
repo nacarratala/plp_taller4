@@ -118,6 +118,8 @@ ids(A, B, I) :- ids(B, A, X), I is 1/X, !.
 
 % Reversibilidad:
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % Ej 5
 % ids ( +A , +B , -I )
 ids((UA,CA),(UB,CB),Ib) :- ids(UA,UB,Iu), Ib is Iu * (CA / CB).
@@ -128,8 +130,16 @@ gana(_,[]) :- !.
 gana([A|AS],[B|BS]) :- gana(A,B), gana([A|AS],BS), !.
 gana([A|AS],[B|BS]) :- gana(B,A), gana(AS,[B|BS]), !.
 
+%cantUnidades(+E, ?R)
+cantUnidades((U,C), C).
+cantUnidades([], 0).
+cantUnidades([ (U,C) | L ], R) :-  cantUnidades(L, Y), R is C+Y.
+
+
+
 % ganaA ( ?A , +B , ?N )
-% Recordar que un ejército no puede tener más de 5 unidades entre todos los batallones que lo componen.
+ganaA(A, B, N) :- nonvar(N), ejercito(A), cantUnidades(A, N), !.
+ganaA(A, B, N) :- var(N), ejercito(A), cantUnidades(A, C), C < N+1, !.
 
 % ¿Usaron "ejercito"? ¿por qué?
 
