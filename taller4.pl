@@ -11,10 +11,10 @@ edificio(arqueria).
 edificio(establo).
 % Entrenamiento
 % Este predicado indica en qué edificio se entrena cada unidad.
-entrena(lancero,      cuartel).
-entrena(arquero,      arqueria).
-entrena(guerrillero,  arqueria).
-entrena(jinete,       establo).
+entrena(lancero,      cuartel). %80+300 = 380
+entrena(arquero,      arqueria). %90+330 = 420
+entrena(guerrillero,  arqueria). %70+330 = 400
+entrena(jinete,       establo). %120+400 = 640
 % Costos
 % Este predicado indica el costo de cada unidad y de cada edificio.
 costo(lancero,      80).
@@ -56,6 +56,14 @@ esBatallon((U,C)) :- unidad(U), integer(C), C > 0.
 ejercito(E) :- nonvar(E), pairs(X,Y), esEjercito(X,Y,E), ANTERIOR is X-1, not(esEjercito(ANTERIOR, Y, E)), !.
 ejercito(E) :-    var(E), pairs(X,Y), esEjercito(X,Y,E), ANTERIOR is X-1, not(esEjercito(ANTERIOR, Y, E)).
 
+
+% Reversibilidad: El parametro E puede estar instanciado o no. Esto es posible gracias realizar al comienzo el chequeo de si E es una varaible libre.
+%% De no existir este chequeo, si llamasemos a ejercito(E) con un ejercito E instanciado de forma incorrecta, el predicado se colgaria pues generaria 
+%% los infinitos ejercitos hasta poder encontrar uno que unifique con el pasado por parametro. 
+%% Observacion: De no exisitir el chequeo, el predicado NO se colgaria si el E pasado como parametro fuese efectivamente un ejercito bien
+%% instanciado pues en algun momento el predicado sera capaz de generar ese mismo ejercito que unifique con el parametro.
+
+
 % esEjercito(+K,+N,-E): tiene éxito si E es un ejército de N batallones con hasta K unidades cada uno.
 esEjercito(_,0,[]) :- !.
 esEjercito(K, N,[(U,C)|XS]) :- between(1,K,C), unidad(U), H is N-1, esEjercito(K,H,XS).
@@ -67,7 +75,7 @@ pairs(X,Y) :- from(2, S), K is S-1, between(1, K, X), Y is S-X.
 from(X, X).
 from(X, Y) :- N is X+1, from(N,Y).
 
-% Reversibilidad:
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Ej 3 : instancia una lista de edificios necesarios para el ejército
@@ -75,7 +83,31 @@ from(X, Y) :- N is X+1, from(N,Y).
 edificiosNecesarios([], []).
 edificiosNecesarios([(U,_) | L], R) :- entrena(U,X), edificiosNecesarios(L, Y), append([X], Y, Z), sort(Z, R).
 
-% Reversibilidad:
+% Reversibilidad: 
+% (-EJ, -ED): En este caso en el que ambos esten sin instanciar, unificara con la primer linea, por lo tanto un resultado sera ([], [])
+% Cuando haga un redo, entrando a la segunda linea, ejecutra entrena(U,X) con U,X sin instanciar. Lo cual siempre devuelve como primer resultado
+% el par (lancero, cuartel). Posteriormente a eso hace una llamada recursiva, cuyo primer resultado ser nuevamente ([], []). En definitiva, si 
+% continuamos pidiendole al predicado mas respuestas, nos quedaria algo de la pinta: 
+% ([],[]) 
+% ([(lancero, basura)], [cuartel])
+% ([(lancero, basura), (lancero, basura)], [cuartel])
+% ([(lancero, basura), (lancero, basura), (lancero, basura)], [cuartel])
+% ...
+
+% (-EJ, +ED):
+% En este caso, el predicado no puede unificar con ([], []), por lo tanto nunca consigue un primer posible resultado, ya que en la segunda linea
+%% se llama recursivamente y de nuevo, no puede unificar con ([], []). El predicado se cuelga
+
+% (-EJ, +ED):
+% En este caso, el predicado no puede unificar con ([], []), por lo tanto nunca consigue un primer posible resultado, ya que en la segunda linea
+%% se llama recursivamente y de nuevo, no puede unificar con ([], []). El predicado se cuelga
+
+% (+EJ, +ED): en este caso, el predicado no se colgara. Toma el ejercito definido y ejecuta como "el caso normal" donde termina instanciando en ED
+% los edificios necesarios. Pero, por como esta definido sort, es posible que este caso devuelva false cuando en realidad deberia ser true. Esto 
+% se debe a que discrimina en el orden de la lista resultante de edificios necesarios, donode, por ejemplo [establo, arqueria] != [arqueria, establo]
+
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Ej 4 : índice de superioridad para unidades
@@ -90,6 +122,10 @@ ids(A, A, 1) :- unidad(A), !.
 ids(A, B, I) :- unidad(A), unidad(B), ids(B, A, X), I is 1/X, !.
 
 % Reversibilidad:
+% Este predicado admite todas las posibles combinaciones. Esta a la vista que es un predicado muy "hardcodeado". Aunque, una observacion que vale 
+% la pena aclarar es que, en caso de no instanciar A y/o B no devuelve todos los potenciales resultados. Por ejemplo, si corriesemos 
+% ids(A, B, 2)), dos posibles pares de resultado podrian ser (lancero, jinete) y (guerrillero, arquero). NO obstante, el predicado,
+% por como esta implemetnado con el !, devuelve solamente el primero que encuentra. En este caso, (lancero, jinete)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -124,12 +160,41 @@ ganaA(A, B, N) :- not(esBatallon(B)), var(N), cantUnidades(B, X), between(1,X,Y)
 %que ya no encontrara un ejercito A que venza a un potencial ejercito B, seguira buscando hasta el infinito de los tiempos y moriremos
 %de anguista. 
 
+% produccionTotal(+A, -PT) : tiene éxito si PT es la producción de recursos que generan A cantidad de aldeanos.
+produccionTotal(A,PT) :- PT is A*50.
 
+% aldeanosTotal(-A,+PT) : tiene éxito si A es la menor cantidad de aldeanos que pueden producir PT recursos.
+aldeanosTotal(A,PT) :- between(1,PT,A), A*50 >= PT, !.
 
 % Ej 6 : instancia un pueblo para derrotar a un ejército enemigo
 % puebloPara ( +En , ?A , -Ed , -Ej )
+puebloPara(En, A, Ed, Ej) :- nonvar(A), ganaA(Ej,En,_),
+    edificiosNecesarios(Ej, Ed),
+    costo(Ed,COSTO_EDIFICIOS),
+    costo(Ej,COSTO_EJERCITO),
+    COSTO_TOTAL is COSTO_EDIFICIOS + COSTO_EJERCITO,
+    produccionTotal(A, PRODUCCION_TOTAL), COSTO_TOTAL =< PRODUCCION_TOTAL, !.
+puebloPara(En, A, Ed, Ej) :- var(A), ganaA(Ej,En,_),
+    edificiosNecesarios(Ej, Ed),
+    costo(Ed,COSTO_EDIFICIOS),
+    costo(Ej,COSTO_EJERCITO),
+    COSTO_TOTAL is COSTO_EDIFICIOS + COSTO_EJERCITO,
+    from(1,A),
+    produccionTotal(A, PRODUCCION_TOTAL), COSTO_TOTAL =< PRODUCCION_TOTAL, !.
+
 % Ej 7 : pueblo óptimo (en cantidad de aldenos necesarios)
 % puebloOptimoPara( +En , ?A , -Ed , -Ej )
+puebloOptimoPara(En, A, Ed, Ej) :- nonvar(A), puebloPara(En,A,Ed,Ej).
+puebloOptimoPara(En, A, Ed, Ej) :- var(A), puebloPara(En, A, _, _), puebloParaN(En, A, Ed, Ej).
+
+% puebloParaN ( +En , +A , -Ed , -Ej ): tiene éxito si con A aldeanos se pueden construir los edificios Ed y el ejército Ej que venza a En con a lo sumo su misma cantidad de unidades.
+puebloParaN(En, A, Ed, Ej) :- nonvar(A), ganaA(Ej,En,_),
+    edificiosNecesarios(Ej, Ed),
+    costo(Ed,COSTO_EDIFICIOS),
+    costo(Ej,COSTO_EJERCITO),
+    COSTO_TOTAL is COSTO_EDIFICIOS + COSTO_EJERCITO,
+    produccionTotal(A, PRODUCCION_TOTAL), COSTO_TOTAL =< PRODUCCION_TOTAL.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% TESTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 cantidadTestsCosto(10).
 testCosto(1) :- costo([(arquero, 2)], 180).
