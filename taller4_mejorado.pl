@@ -56,13 +56,11 @@ esBatallon((U,C)) :- unidad(U), integer(C), C > 0.
 ejercito(E) :- nonvar(E), pairs(X,Y), esEjercito(X,Y,E), ANTERIOR is X-1, not(esEjercito(ANTERIOR, Y, E)), !.
 ejercito(E) :-    var(E), pairs(X,Y), esEjercito(X,Y,E), ANTERIOR is X-1, not(esEjercito(ANTERIOR, Y, E)).
 
-
 % Reversibilidad: El parametro E puede estar instanciado o no. Esto es posible gracias realizar al comienzo el chequeo de si E es una varaible libre.
 %% De no existir este chequeo, si llamasemos a ejercito(E) con un ejercito E instanciado de forma incorrecta, el predicado se colgaria pues generaria 
 %% los infinitos ejercitos hasta poder encontrar uno que unifique con el pasado por parametro. 
 %% Observacion: De no exisitir el chequeo, el predicado NO se colgaria si el E pasado como parametro fuese efectivamente un ejercito bien
 %% instanciado pues en algun momento el predicado sera capaz de generar ese mismo ejercito que unifique con el parametro.
-
 
 % esEjercito(+K,+N,-E): tiene éxito si E es un ejército de N batallones con hasta K unidades cada uno.
 esEjercito(_,0,[]) :- !.
@@ -76,6 +74,28 @@ from(X, X).
 from(X, Y) :- N is X+1, from(N,Y).
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%EJERCICIO 2 MEJORADO
+
+% ejercito2 ( -E ): % instancia todos los ejercitos posibles
+ejercito2(E) :- from(1, X), ejercitoN2(X,E).
+
+% esEjercito2 ( +E ):  Duelve true si E es un ejercito
+esEjercito2([(U,C)]) :- integer(C), unidad(U).
+esEjercito2([(U,C)|XS]) :- unidad(U), integer(C), esEjercito2(XS).
+
+% esEjercitoN ( +N, -E ): instancia todos los ejercitos de N unidades
+ejercitoN2(0, []).
+ejercitoN2(N, [(U,C)|XS]) :-  unidad(U), between(1,N,C), M is N-C, ejercitoN2(M, XS). 
+
+%batallonN2 generador de batallones con N unidades
+batallonN2(N, (U, N)) :- unidad(U).
+
+%cantUnidades(+E, ?R): tiene éxito si R es la cantidad de unidades total del ejército E. (asume fuertemente que E es un ejercito)
+cantUnidades((_,C), C).
+cantUnidades([], 0).
+cantUnidades([ (_,C) | L ], R) :-  cantUnidades(L, Y), R is C+Y.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Ej 3 : instancia una lista de edificios necesarios para el ejército
@@ -85,7 +105,6 @@ edificiosNecesarios([(U,_) | L], R) :- entrena(U,X), edificiosNecesarios(L, Y), 
 
 %(-EJ, -ED)
 edificiosNecesarios2(EJ, ED) :- ejercito(EJ), edificiosNecesarios(EJ, ED).
-
 
 
 % Reversibilidad: 
@@ -140,22 +159,12 @@ gana(_,[]) :- !.
 gana([A|AS],[B|BS]) :- gana(A,B), gana([A|AS],BS), !.
 gana([A|AS],[B|BS]) :- gana(B,A), gana(AS,[B|BS]), !.
 
-%cantUnidades(+E, ?R): tiene éxito si R es la cantidad de unidades total del ejército E.
-cantUnidades((_,C), C).
-cantUnidades([], 0).
-cantUnidades([ (_,C) | L ], R) :-  cantUnidades(L, Y), R is C+Y.
-
-%esEjercitoN(?E, +R): instanciador de ejércitos con R unidades. Admite que E sea solo un batallón.
-esEjercitoN(E,R) :- between(1,R,X), esEjercito(R,X,E), cantUnidades(E,R).
-
-%esBatallonN(-B, +D, +H, ) : instanciador de batallones desde D unidades hasta H unidades
-esBatallonN((U, C), D, H) :- between(D, H, C), unidad(U).
 
 % ganaA ( ?A , +B , ?N )
-ganaA(A, B, N) :- esBatallon(B), nonvar(N), esBatallonN(A, N, N), gana(A, B).  
-ganaA(A, B, N) :- esBatallon(B), var(N), cantUnidades(B, N), esBatallonN(A, 1, N), gana(A, B).  
-ganaA(A, B, N) :- not(esBatallon(B)), nonvar(N), esEjercitoN(A,N), gana(A,B).
-ganaA(A, B, N) :- not(esBatallon(B)), var(N), cantUnidades(B, X), between(1,X,Y), esEjercitoN(A,Y), gana(A,B).
+ganaA(A, B, N) :- esBatallon(B), nonvar(N), batallonN2(N, A), gana(A, B).  
+ganaA(A, B, N) :- esBatallon(B), var(N), cantUnidades(B, N), between(1, N, K), batallonN2(K, A), gana(A, B).  
+ganaA(A, B, N) :- not(esBatallon(B)), nonvar(N), ejercitoN2(N, A), gana(A,B).
+ganaA(A, B, N) :- not(esBatallon(B)), var(N), cantUnidades(B, N), between(1,N,K), ejercitoN2(K, A), gana(A,B).
 
 % ¿Usaron "ejercito"? ¿por qué?
 %No, no la utilizamos porque genera infinitos ejercitos sin discriminar por cantidad de unidades. Por lo tanto, por mas que sea obvio
@@ -175,8 +184,22 @@ puebloPara(En, A, Ed, Ej) :- nonvar(A), ganaA(Ej,En,_),
     costo(Ed,COSTO_EDIFICIOS),
     costo(Ej,COSTO_EJERCITO),
     COSTO_TOTAL is COSTO_EDIFICIOS + COSTO_EJERCITO,
-    produccionTotal(A, PRODUCCION_TOTAL), COSTO_TOTAL =< PRODUCCION_TOTAL, !.
+    produccionTotal(A, PRODUCCION_TOTAL), COSTO_TOTAL =< PRODUCCION_TOTAL.
+
 puebloPara(En, A, Ed, Ej) :- var(A), ganaA(Ej,En,_),
+    edificiosNecesarios(Ej, Ed),
+    costo(Ed,COSTO_EDIFICIOS),
+    costo(Ej,COSTO_EJERCITO),
+    COSTO_TOTAL is COSTO_EDIFICIOS + COSTO_EJERCITO,
+    from(1,A),
+    produccionTotal(A, PRODUCCION_TOTAL), COSTO_TOTAL =< PRODUCCION_TOTAL.
+
+% Ej 7 : pueblo óptimo (en cantidad de aldenos necesarios)
+% puebloOptimoPara( +En , ?A , -Ed , -Ej )
+puebloOptimoPara(En, A, Ed, Ej) :- nonvar(A), puebloPara(En,A,Ed,Ej).
+puebloOptimoPara(En, A, Ed, Ej) :- var(A), minimaCantidadDeAldeanos(En, A, _, _), puebloPara(En, A, Ed, Ej).
+
+minimaCantidadDeAldeanos(En, A, Ed, Ej) :- var(A), ganaA(Ej,En,_),
     edificiosNecesarios(Ej, Ed),
     costo(Ed,COSTO_EDIFICIOS),
     costo(Ej,COSTO_EJERCITO),
@@ -184,18 +207,6 @@ puebloPara(En, A, Ed, Ej) :- var(A), ganaA(Ej,En,_),
     from(1,A),
     produccionTotal(A, PRODUCCION_TOTAL), COSTO_TOTAL =< PRODUCCION_TOTAL, !.
 
-% Ej 7 : pueblo óptimo (en cantidad de aldenos necesarios)
-% puebloOptimoPara( +En , ?A , -Ed , -Ej )
-puebloOptimoPara(En, A, Ed, Ej) :- nonvar(A), puebloPara(En,A,Ed,Ej).
-puebloOptimoPara(En, A, Ed, Ej) :- var(A), puebloPara(En, A, _, _), puebloParaN(En, A, Ed, Ej).
-
-% puebloParaN ( +En , +A , -Ed , -Ej ): tiene éxito si con A aldeanos se pueden construir los edificios Ed y el ejército Ej que venza a En con a lo sumo su misma cantidad de unidades.
-puebloParaN(En, A, Ed, Ej) :- nonvar(A), ganaA(Ej,En,_),
-    edificiosNecesarios(Ej, Ed),
-    costo(Ed,COSTO_EDIFICIOS),
-    costo(Ej,COSTO_EJERCITO),
-    COSTO_TOTAL is COSTO_EDIFICIOS + COSTO_EJERCITO,
-    produccionTotal(A, PRODUCCION_TOTAL), COSTO_TOTAL =< PRODUCCION_TOTAL.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% TESTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 cantidadTestsCosto(10).
