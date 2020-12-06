@@ -53,8 +53,8 @@ esBatallon((U,C)) :- unidad(U), integer(C), C > 0.
 %
 % Ej 2 : instanciar un ejército arbitrario
 % ejercito ( -E )
-ejercito(E) :- nonvar(E), pairs(X,Y), esEjercito(X,Y,E), ANTERIOR is X-1, not(esEjercito(ANTERIOR, Y, E)), !.
-ejercito(E) :-    var(E), pairs(X,Y), esEjercito(X,Y,E), ANTERIOR is X-1, not(esEjercito(ANTERIOR, Y, E)).
+%ejercitoVieja(E) :- nonvar(E), pairs(X,Y), esEjercito(X,Y,E), ANTERIOR is X-1, not(esEjercito(ANTERIOR, Y, E)), !.
+%ejercitoVieja(E) :-    var(E), pairs(X,Y), esEjercito(X,Y,E), ANTERIOR is X-1, not(esEjercito(ANTERIOR, Y, E)).
 
 % Reversibilidad: El parametro E puede estar instanciado o no. Esto es posible gracias realizar al comienzo el chequeo de si E es una varaible libre.
 %% De no existir este chequeo, si llamasemos a ejercito(E) con un ejercito E instanciado de forma incorrecta, el predicado se colgaria pues generaria 
@@ -78,18 +78,14 @@ from(X, Y) :- N is X+1, from(N,Y).
 %EJERCICIO 2 MEJORADO
 
 % ejercito2 ( -E ): % instancia todos los ejercitos posibles
-ejercito2(E) :- from(1, X), ejercitoN2(X,E).
-
-% esEjercito2 ( +E ):  Duelve true si E es un ejercito
-esEjercito2([(U,C)]) :- integer(C), unidad(U).
-esEjercito2([(U,C)|XS]) :- unidad(U), integer(C), esEjercito2(XS).
+ejercito(E) :- from(1, X), ejercitoN(X,E).
 
 % esEjercitoN ( +N, -E ): instancia todos los ejercitos de N unidades
-ejercitoN2(0, []).
-ejercitoN2(N, [(U,C)|XS]) :-  unidad(U), between(1,N,C), M is N-C, ejercitoN2(M, XS). 
+ejercitoN(0, []).
+ejercitoN(N, [(U,C)|XS]) :-  unidad(U), between(1,N,C), M is N-C, ejercitoN(M, XS). 
 
 %batallonN2 generador de batallones con N unidades
-batallonN2(N, (U, N)) :- unidad(U).
+batallonN(N, (U, N)) :- unidad(U).
 
 %cantUnidades(+E, ?R): tiene éxito si R es la cantidad de unidades total del ejército E. (asume fuertemente que E es un ejercito)
 cantUnidades((_,C), C).
@@ -102,10 +98,6 @@ cantUnidades([ (_,C) | L ], R) :-  cantUnidades(L, Y), R is C+Y.
 % edificiosNecesarios ( +Ej , -Ed )
 edificiosNecesarios([], []).
 edificiosNecesarios([(U,_) | L], R) :- entrena(U,X), edificiosNecesarios(L, Y), sort([ X | Y ], R).
-
-%(-EJ, -ED)
-edificiosNecesarios2(EJ, ED) :- ejercito(EJ), edificiosNecesarios(EJ, ED).
-
 
 % Reversibilidad: 
 % (-EJ, -ED): En este caso en el que ambos esten sin instanciar, unificara con la primer linea, por lo tanto un resultado sera ([], [])
@@ -128,6 +120,20 @@ edificiosNecesarios2(EJ, ED) :- ejercito(EJ), edificiosNecesarios(EJ, ED).
 % (+EJ, +ED): en este caso, el predicado no se colgara. Toma el ejercito definido y ejecuta como "el caso normal" donde termina instanciando en ED
 % los edificios necesarios. Pero, por como esta definido sort, es posible que este caso devuelva false cuando en realidad deberia ser true. Esto 
 % se debe a que discrimina en el orden de la lista resultante de edificios necesarios, donode, por ejemplo [establo, arqueria] != [arqueria, establo]
+
+%(-EJ, -ED)
+edificiosNecesarios2(Ej, Ed) :- ejercito(Ej), edificiosNecesarios(Ej, Ed).
+
+% Reversibilidad: 
+
+%(-Ej, -Ed): Cuando ambos parametros vienen sin instanciar no habra problema, ya que, por lo viso
+% en el ejecicio anterior, ejercito instancia todos los ejercitos posibles, y por el punto A, sabemos
+% que edificiosNecesarios genera bien los edificios necesarios cuando el ejercito esta instanciado
+
+% (+Ej, -Ed): En el caso que el ejercito este instanciado CORRECTAMENTE, el predicado funcionara como 
+% se espera pues, en algun momneto, ejercito(Ej) dara true. En cambio, si Ej esta instanciado de forma
+% incorrecta, ejercito(Ej) ciclara infinitamente y nunca encontrara una unificacion posible, lo que 
+% causara que el predicado edificiosNecesarios2 se cuelgue.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -161,10 +167,10 @@ gana([A|AS],[B|BS]) :- gana(B,A), gana(AS,[B|BS]), !.
 
 
 % ganaA ( ?A , +B , ?N )
-ganaA(A, B, N) :- esBatallon(B), nonvar(N), batallonN2(N, A), gana(A, B).  
-ganaA(A, B, N) :- esBatallon(B), var(N), cantUnidades(B, N), between(1, N, K), batallonN2(K, A), gana(A, B).  
-ganaA(A, B, N) :- not(esBatallon(B)), nonvar(N), ejercitoN2(N, A), gana(A,B).
-ganaA(A, B, N) :- not(esBatallon(B)), var(N), cantUnidades(B, N), between(1,N,K), ejercitoN2(K, A), gana(A,B).
+ganaA(A, B, N) :- esBatallon(B), nonvar(N), batallonN(N, A), gana(A, B).  
+ganaA(A, B, N) :- esBatallon(B), var(N), cantUnidades(B, N), between(1, N, K), batallonN(K, A), gana(A, B).  
+ganaA(A, B, N) :- not(esBatallon(B)), nonvar(N), ejercitoN(N, A), gana(A,B).
+ganaA(A, B, N) :- not(esBatallon(B)), var(N), cantUnidades(B, N), between(1,N,K), ejercitoN(K, A), gana(A,B).
 
 % ¿Usaron "ejercito"? ¿por qué?
 %No, no la utilizamos porque genera infinitos ejercitos sin discriminar por cantidad de unidades. Por lo tanto, por mas que sea obvio
@@ -179,25 +185,27 @@ aldeanosTotal(A,PT) :- between(1,PT,A), A*50 >= PT, !.
 
 % Ej 6 : instancia un pueblo para derrotar a un ejército enemigo
 % puebloPara ( +En , ?A , -Ed , -Ej )
-puebloPara(En, A, Ed, Ej) :- nonvar(A), costoTotal(En, COSTO_TOTAL),
-    produccionTotal(A, PRODUCCION_TOTAL), COSTO_TOTAL =< PRODUCCION_TOTAL.
+% puebloPara(En, A, Ed, Ej) :- var(A), 
 
-puebloPara(En, A, Ed, Ej) :- var(A), costoTotal(En, COSTO_TOTAL),
-    from(1,A),
-    produccionTotal(A, PRODUCCION_TOTAL), COSTO_TOTAL =< PRODUCCION_TOTAL.
+puebloPara(En, A, Ed, Ej) :- nonvar(A), generarPuebloVencedor(En, A, Ed, Ej).
+puebloPara(En, A, Ed, Ej) :- var(A), from(1,A), generarPuebloVencedor(En, A, Ed, Ej).
 
 %(+En)
-costoTotal(En, COSTO_TOTAL) :- ganaA(Ej, En, _), edificiosNecesarios(Ej,Ed), costo(Ed, COSTO_EDIFICIOS), costo(Ej, COSTO_EJERCITO), COSTO_TOTAL is COSTO_EDIFICIOS+COSTO_EJERCITO
+generarPuebloVencedor(En, A, Ed, Ej) :-
+    ganaA(Ej, En, _),
+    edificiosNecesarios(Ej,Ed),
+    costo(Ed, COSTO_EDIFICIOS),
+    costo(Ej, COSTO_EJERCITO),
+    COSTO_TOTAL is COSTO_EDIFICIOS+COSTO_EJERCITO,
+    produccionTotal(A, PRODUCCION_TOTAL),
+    COSTO_TOTAL =< PRODUCCION_TOTAL.
 
 % Ej 7 : pueblo óptimo (en cantidad de aldenos necesarios)
 % puebloOptimoPara( +En , ?A , -Ed , -Ej )
-puebloOptimoPara(En, A, Ed, Ej) :- nonvar(A), puebloPara(En,A,Ed,Ej).
-puebloOptimoPara(En, A, Ed, Ej) :- var(A), minimaCantidadDeAldeanos(En, A, _, _), puebloPara(En, A, Ed, Ej).
+puebloOptimoPara(En, A, Ed, Ej) :- nonvar(A), minimaCantidadDeAldeanos(En, X), A is X, puebloPara(En,A,Ed,Ej).
+puebloOptimoPara(En, A, Ed, Ej) :- var(A), minimaCantidadDeAldeanos(En, A), puebloPara(En, A, Ed, Ej).
 
-minimaCantidadDeAldeanos(En, A, Ed, Ej) :- var(A), costoTotal(En, COSTO_TOTAL),
-    from(1,A),
-    produccionTotal(A, PRODUCCION_TOTAL), COSTO_TOTAL =< PRODUCCION_TOTAL, !.
-
+minimaCantidadDeAldeanos(En, A) :- from(1,A), generarPuebloVencedor(En, A, _, _), !.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% TESTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 cantidadTestsCosto(10).
