@@ -179,31 +179,22 @@ aldeanosTotal(A,PT) :- between(1,PT,A), A*50 >= PT, !.
 
 % Ej 6 : instancia un pueblo para derrotar a un ejército enemigo
 % puebloPara ( +En , ?A , -Ed , -Ej )
-puebloPara(En, A, Ed, Ej) :- nonvar(A), ganaA(Ej,En,_),
-    edificiosNecesarios(Ej, Ed),
-    costo(Ed,COSTO_EDIFICIOS),
-    costo(Ej,COSTO_EJERCITO),
-    COSTO_TOTAL is COSTO_EDIFICIOS + COSTO_EJERCITO,
+puebloPara(En, A, Ed, Ej) :- nonvar(A), costoTotal(En, COSTO_TOTAL),
     produccionTotal(A, PRODUCCION_TOTAL), COSTO_TOTAL =< PRODUCCION_TOTAL.
 
-puebloPara(En, A, Ed, Ej) :- var(A), ganaA(Ej,En,_),
-    edificiosNecesarios(Ej, Ed),
-    costo(Ed,COSTO_EDIFICIOS),
-    costo(Ej,COSTO_EJERCITO),
-    COSTO_TOTAL is COSTO_EDIFICIOS + COSTO_EJERCITO,
+puebloPara(En, A, Ed, Ej) :- var(A), costoTotal(En, COSTO_TOTAL),
     from(1,A),
     produccionTotal(A, PRODUCCION_TOTAL), COSTO_TOTAL =< PRODUCCION_TOTAL.
+
+%(+En)
+costoTotal(En, COSTO_TOTAL) :- ganaA(Ej, En, _), edificiosNecesarios(Ej,Ed), costo(Ed, COSTO_EDIFICIOS), costo(Ej, COSTO_EJERCITO), COSTO_TOTAL is COSTO_EDIFICIOS+COSTO_EJERCITO
 
 % Ej 7 : pueblo óptimo (en cantidad de aldenos necesarios)
 % puebloOptimoPara( +En , ?A , -Ed , -Ej )
 puebloOptimoPara(En, A, Ed, Ej) :- nonvar(A), puebloPara(En,A,Ed,Ej).
 puebloOptimoPara(En, A, Ed, Ej) :- var(A), minimaCantidadDeAldeanos(En, A, _, _), puebloPara(En, A, Ed, Ej).
 
-minimaCantidadDeAldeanos(En, A, Ed, Ej) :- var(A), ganaA(Ej,En,_),
-    edificiosNecesarios(Ej, Ed),
-    costo(Ed,COSTO_EDIFICIOS),
-    costo(Ej,COSTO_EJERCITO),
-    COSTO_TOTAL is COSTO_EDIFICIOS + COSTO_EJERCITO,
+minimaCantidadDeAldeanos(En, A, Ed, Ej) :- var(A), costoTotal(En, COSTO_TOTAL),
     from(1,A),
     produccionTotal(A, PRODUCCION_TOTAL), COSTO_TOTAL =< PRODUCCION_TOTAL, !.
 
